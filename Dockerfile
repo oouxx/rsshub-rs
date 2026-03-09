@@ -10,41 +10,27 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Step 1: 只复制所有 Cargo.toml / Cargo.lock，先缓存依赖层 ──────────────────
+# ── 缓存依赖层：只复制 Cargo.toml / Cargo.lock，先把依赖编译好 ────────────────
+# 这样只要依赖不变，后续改业务代码不会重新下载编译依赖
 COPY Cargo.toml Cargo.lock ./
-COPY crates/core/Cargo.toml   crates/core/Cargo.toml
-COPY crates/server/Cargo.toml crates/server/Cargo.toml
 
-# 给每个 workspace 成员创建最小占位文件
-# core 是 lib crate → lib.rs
-# server 是 bin crate → main.rs，内容必须能通过编译
-RUN mkdir -p crates/core/src crates/server/src \
-    && echo 'pub fn build_router() -> axum::Router { axum::Router::new() }' \
-       > crates/core/src/lib.rs \
-    && echo 'fn main() {}' \
-       > crates/server/src/main.rs
+# 单 crate 直接创建占位 main.rs 即可，无需考虑 workspace
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
 
-# 编译依赖（这一层会被 Docker 缓存，只要 Cargo.toml 不变就不会重跑）
-RUN cargo build --release -p rss-forge-server
+# 编译依赖（产物会被 Docker 缓存）
+RUN cargo build --release
 
-# ── Step 2: 删除占位产物，换上真实源码 ────────────────────────────────────────
-# 必须同时删除：
-#   1. 占位的 src 文件
-#   2. 对应的编译产物（.d 依赖描述文件 + rlib / 二进制）
-#   否则增量编译时 rustc 会因为找不到旧占位文件路径而报错
-RUN rm -rf crates/core/src crates/server/src \
-    && rm -f target/release/rsshub-rs \
-             target/release/deps/rsshub_rs* \
-             target/release/deps/rss_forge_core* \
-             target/release/.fingerprint/rsshub-rs-*/* \
-             target/release/.fingerprint/rss-forge-core-*/*
+# 删除占位文件和对应编译产物
+# 必须删干净，否则增量编译会跳过重新编译业务代码
+RUN rm -f src/main.rs \
+          target/release/rsshub-rs \
+          target/release/deps/rsshub_rs*
 
-COPY crates/core/src   crates/core/src
-COPY crates/server/src crates/server/src
-COPY static            static
+# ── 复制真实源码并编译 ────────────────────────────────────────────────────────
+COPY src    ./src
+COPY static ./static
 
-# 真实编译（依赖层已缓存，只重编业务代码，速度快）
-RUN cargo build --release -p rss-forge-server
+RUN cargo build --release
 
 # ── Stage 2: 最小运行镜像 ─────────────────────────────────────────────────────
 FROM debian:bookworm-slim
@@ -57,11 +43,11 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/rsshub-rs .
-COPY --from=builder /app/static ./static
+COPY --from=builder /app/static                   ./static
 
 EXPOSE 3000
 
-ENV RUST_LOG=rss_forge=info
+ENV RUST_LOG=rsshub_rs=info,tower_http=info
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1

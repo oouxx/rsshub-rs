@@ -1,42 +1,19 @@
 services:
-  # ── 主服务 ────────────────────────────────────────────────────────────────
   rsshub-rs:
+    # 本地开发用 build，生产环境注释掉 build 改用 image
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/oouxx/rsshub-rs:latest
+    # image: ghcr.io/oouxx/rsshub-rs:latest # 生产环境取消注释
     container_name: rsshub-rs
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      - RUST_LOG=${RUST_LOG:-rsshub-rs=info,tower_http=info}
-    # 健康检查：每 30s 检测一次 /health 接口
+      - RUST_LOG=${RUST_LOG:-rsshub_rs=info,tower_http=info}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
-
-  # ── 可选：Nginx 反向代理 + HTTPS ─────────────────────────────────────────
-  # 如果你想直接把 rsshub-rs 暴露到公网，取消注释这段
-  #
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: rsshub-rs-nginx
-  #   restart: unless-stopped
-  #   depends_on:
-  #     rsshub-rs:
-  #       condition: service_healthy
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-  #     - ./nginx/certs:/etc/nginx/certs:ro      # SSL 证书目录
-  #   healthcheck:
-  #     test: ["CMD", "nginx", "-t"]
-  #     interval: 30s
-  #     timeout: 5s
-  #     retries: 3
