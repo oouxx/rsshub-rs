@@ -1,11 +1,13 @@
+use crate::feeds::{build_rss, FeedItem, FeedMeta};
+use crate::utils::{
+    http::fetch_json,
+    response::{ErrorResponse, RssResponse},
+};
 use axum::response::IntoResponse;
 use serde::Deserialize;
-use crate::feeds::{build_rss, FeedItem, FeedMeta};
-use crate::utils::{http::fetch_json, response::{RssResponse, ErrorResponse}};
 
 #[derive(Deserialize, Debug)]
 struct V2exTopic {
-    id: u64,
     title: String,
     url: String,
     content: Option<String>,
@@ -13,7 +15,6 @@ struct V2exTopic {
     member: V2exMember,
     node: Option<V2exNode>,
     created: u64,
-    last_modified: Option<u64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -59,7 +60,10 @@ async fn fetch_v2ex(endpoint: &str) -> anyhow::Result<String> {
             let mut desc_parts = Vec::new();
 
             if let Some(node) = &topic.node {
-                desc_parts.push(format!("📂 节点: <a href=\"https://www.v2ex.com/go/{}\">{}</a>", node.name, node.title));
+                desc_parts.push(format!(
+                    "📂 节点: <a href=\"https://www.v2ex.com/go/{}\">{}</a>",
+                    node.name, node.title
+                ));
             }
             desc_parts.push(format!("💬 回复数: {}", topic.replies));
 
@@ -70,12 +74,10 @@ async fn fetch_v2ex(endpoint: &str) -> anyhow::Result<String> {
                 }
             }
 
-            let pub_date = chrono::DateTime::from_timestamp(topic.created as i64, 0)
-                .map(|dt| dt.into());
+            let pub_date =
+                chrono::DateTime::from_timestamp(topic.created as i64, 0).map(|dt| dt.into());
 
-            let categories = topic.node
-                .map(|n| vec![n.title])
-                .unwrap_or_default();
+            let categories = topic.node.map(|n| vec![n.title]).unwrap_or_default();
 
             FeedItem {
                 title: topic.title,

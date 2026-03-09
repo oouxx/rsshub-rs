@@ -1,0 +1,6 @@
+[http_service]
+  internal_port = 3000        # 要和代码里的端口一致
+  force_https = true
+  auto_stop_machines = true   # 没流量自动休眠，省免费额度
+  auto_start_machines = true
+  min_machines_running = 0
