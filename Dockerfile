@@ -28,7 +28,7 @@ RUN rm -f src/main.rs \
 
 # ── 复制真实源码并编译 ────────────────────────────────────────────────────────
 COPY src    ./src
-
+COPY templates ./templates
 RUN cargo build --release
 
 # ── Stage 2: 最小运行镜像 ─────────────────────────────────────────────────────
