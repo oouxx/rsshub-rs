@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # image: ghcr.io/oouxx/rsshub-rs:latest # 生产环境取消注释
+    image: ghcr.io/oouxx/rsshub-rs:latest # 生产环境取消注释
     container_name: rsshub-rs
     restart: unless-stopped
     ports:
