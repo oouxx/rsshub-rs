@@ -1,7 +1,10 @@
+use crate::feeds::{build_rss, FeedItem, FeedMeta};
+use crate::utils::{
+    http::fetch_html,
+    response::{ErrorResponse, RssResponse},
+};
 use axum::{extract::Path, response::IntoResponse};
 use scraper::{Html, Selector};
-use crate::feeds::{build_rss, FeedItem, FeedMeta};
-use crate::utils::{http::fetch_html, response::{RssResponse, ErrorResponse}};
 
 pub async fn trending() -> impl IntoResponse {
     match fetch_trending(None).await {
@@ -13,7 +16,9 @@ pub async fn trending() -> impl IntoResponse {
 pub async fn trending_by_lang(Path(lang): Path<String>) -> impl IntoResponse {
     match fetch_trending(Some(&lang)).await {
         Ok(rss) => RssResponse(rss).into_response(),
-        Err(e) => ErrorResponse(format!("Failed to fetch GitHub trending ({lang}): {e}")).into_response(),
+        Err(e) => {
+            ErrorResponse(format!("Failed to fetch GitHub trending ({lang}): {e}")).into_response()
+        }
     }
 }
 
@@ -42,7 +47,15 @@ async fn fetch_trending(lang: Option<&str>) -> anyhow::Result<String> {
         };
 
         let href = name_el.value().attr("href").unwrap_or("");
-        let repo_name = name_el.text().collect::<Vec<_>>().join("").trim().replace('\n', "").split_whitespace().collect::<Vec<_>>().join("/");
+        let repo_name = name_el
+            .text()
+            .collect::<Vec<_>>()
+            .join("")
+            .trim()
+            .replace('\n', "")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join("/");
         let link = format!("https://github.com{}", href);
 
         let description = repo

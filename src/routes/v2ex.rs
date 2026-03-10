@@ -74,8 +74,7 @@ async fn fetch_v2ex(endpoint: &str) -> anyhow::Result<String> {
                 }
             }
 
-            let pub_date =
-                chrono::DateTime::from_timestamp(topic.created as i64, 0).map(|dt| dt.into());
+            let pub_date = chrono::DateTime::from_timestamp(topic.created as i64, 0);
 
             let categories = topic.node.map(|n| vec![n.title]).unwrap_or_default();
 

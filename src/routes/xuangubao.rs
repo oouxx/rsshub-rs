@@ -1,7 +1,10 @@
+use crate::feeds::{build_rss, FeedItem, FeedMeta};
+use crate::utils::{
+    http::HTTP_CLIENT,
+    response::{ErrorResponse, RssResponse},
+};
 use axum::{extract::Query, response::IntoResponse};
 use serde::Deserialize;
-use crate::feeds::{build_rss, FeedItem, FeedMeta};
-use crate::utils::{http::HTTP_CLIENT, response::{RssResponse, ErrorResponse}};
 
 const API_BASE: &str = "https://baoer-api.xuangubao.com.cn/api/v6/message/newsflash";
 // subj_ids 说明（从抓包观察）：
@@ -88,12 +91,14 @@ async fn fetch_newsflash(q: LiveQuery) -> anyhow::Result<String> {
 
     let api: ApiResponse = resp.json().await?;
 
-    let items: Vec<FeedItem> = api.data.messages
+    let items: Vec<FeedItem> = api
+        .data
+        .messages
         .into_iter()
         .map(|msg| {
-            let link = msg.route.unwrap_or_else(|| {
-                format!("https://xuangubao.com.cn/article/{}", msg.id)
-            });
+            let link = msg
+                .route
+                .unwrap_or_else(|| format!("https://xuangubao.com.cn/article/{}", msg.id));
 
             let mut desc_parts: Vec<String> = Vec::new();
 
@@ -104,7 +109,9 @@ async fn fetch_newsflash(q: LiveQuery) -> anyhow::Result<String> {
             }
 
             if !msg.stocks.is_empty() {
-                let stocks_str = msg.stocks.iter()
+                let stocks_str = msg
+                    .stocks
+                    .iter()
                     .map(|s| format!("{} ({})", s.name, s.symbol))
                     .collect::<Vec<_>>()
                     .join("、");
@@ -112,19 +119,18 @@ async fn fetch_newsflash(q: LiveQuery) -> anyhow::Result<String> {
             }
 
             if !msg.bkj_infos.is_empty() {
-                let tags = msg.bkj_infos.iter()
+                let tags = msg
+                    .bkj_infos
+                    .iter()
                     .map(|b| b.name.as_str())
                     .collect::<Vec<_>>()
                     .join(" · ");
                 desc_parts.push(format!("🏷 {}", tags));
             }
 
-            let pub_date = chrono::DateTime::from_timestamp(msg.created_at, 0)
-                .map(|dt| dt.into());
+            let pub_date = chrono::DateTime::from_timestamp(msg.created_at, 0);
 
-            let categories = msg.bkj_infos.iter()
-                .map(|b| b.name.clone())
-                .collect();
+            let categories = msg.bkj_infos.iter().map(|b| b.name.clone()).collect();
 
             FeedItem {
                 title: msg.title,
@@ -138,7 +144,9 @@ async fn fetch_newsflash(q: LiveQuery) -> anyhow::Result<String> {
         })
         .collect();
 
-    let cursor_hint = api.data.next_cursor
+    let cursor_hint = api
+        .data
+        .next_cursor
         .map(|c| format!(" (next_cursor={})", c))
         .unwrap_or_default();
 

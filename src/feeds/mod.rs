@@ -49,11 +49,7 @@ pub fn build_rss(meta: FeedMeta, items: Vec<FeedItem>) -> Result<String> {
                 let cats: Vec<rss::Category> = item
                     .categories
                     .iter()
-                    .map(|c| {
-                        rss::CategoryBuilder::default()
-                            .name(c.clone())
-                            .build()
-                    })
+                    .map(|c| rss::CategoryBuilder::default().name(c.clone()).build())
                     .collect();
                 builder.categories(cats);
             }

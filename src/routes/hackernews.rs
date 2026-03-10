@@ -1,8 +1,11 @@
-use axum::response::IntoResponse;
-use serde::Deserialize;
-use futures::future::join_all;
 use crate::feeds::{build_rss, FeedItem, FeedMeta};
-use crate::utils::{http::fetch_json, response::{RssResponse, ErrorResponse}};
+use crate::utils::{
+    http::fetch_json,
+    response::{ErrorResponse, RssResponse},
+};
+use axum::response::IntoResponse;
+use futures::future::join_all;
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 struct HnItem {
@@ -83,11 +86,9 @@ async fn fetch_hn_stories(endpoint: &str, title: &str, limit: usize) -> anyhow::
             }
             desc_parts.push(format!("🔗 <a href=\"{}\">Comments</a>", hn_link));
 
-            let pub_date = item.time.map(|t| {
-                chrono::DateTime::from_timestamp(t, 0)
-                    .unwrap_or_default()
-                    .into()
-            });
+            let pub_date = item
+                .time
+                .map(|t| chrono::DateTime::from_timestamp(t, 0).unwrap_or_default());
 
             Some(FeedItem {
                 title,
@@ -114,5 +115,7 @@ async fn fetch_hn_stories(endpoint: &str, title: &str, limit: usize) -> anyhow::
 fn strip_html(s: &str) -> String {
     let re = regex::Regex::new(r"<[^>]+>").unwrap();
     let result = re.replace_all(s, " ");
-    html_escape::decode_html_entities(&result).trim().to_string()
+    html_escape::decode_html_entities(&result)
+        .trim()
+        .to_string()
 }

@@ -1,7 +1,10 @@
+use crate::feeds::{build_rss, FeedItem, FeedMeta};
+use crate::utils::{
+    http::fetch_json,
+    response::{ErrorResponse, RssResponse},
+};
 use axum::{extract::Path, response::IntoResponse};
 use serde::Deserialize;
-use crate::feeds::{build_rss, FeedItem, FeedMeta};
-use crate::utils::{http::fetch_json, response::{RssResponse, ErrorResponse}};
 
 #[derive(Deserialize, Debug)]
 struct RedditListing {
@@ -60,9 +63,7 @@ async fn fetch_subreddit(sub: &str, sort: &str) -> anyhow::Result<String> {
             let d = post.data;
             let permalink = format!("https://reddit.com{}", d.permalink);
 
-            let mut desc_parts = vec![
-                format!("⬆️ {} | 💬 {} comments", d.score, d.num_comments),
-            ];
+            let mut desc_parts = vec![format!("⬆️ {} | 💬 {} comments", d.score, d.num_comments)];
 
             if let Some(flair) = &d.flair_text {
                 if !flair.is_empty() {
@@ -83,10 +84,12 @@ async fn fetch_subreddit(sub: &str, sort: &str) -> anyhow::Result<String> {
                 }
             }
 
-            desc_parts.push(format!("🔗 <a href=\"{}\">Comments on Reddit</a>", permalink));
+            desc_parts.push(format!(
+                "🔗 <a href=\"{}\">Comments on Reddit</a>",
+                permalink
+            ));
 
-            let pub_date = chrono::DateTime::from_timestamp(d.created_utc as i64, 0)
-                .map(|dt| dt.into());
+            let pub_date = chrono::DateTime::from_timestamp(d.created_utc as i64, 0);
 
             FeedItem {
                 title: d.title,

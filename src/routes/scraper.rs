@@ -1,8 +1,11 @@
+use crate::feeds::{build_rss, FeedItem, FeedMeta};
+use crate::utils::{
+    http::fetch_html,
+    response::{ErrorResponse, RssResponse},
+};
 use axum::{extract::Query, response::IntoResponse};
 use scraper::{Html, Selector};
 use serde::Deserialize;
-use crate::feeds::{build_rss, FeedItem, FeedMeta};
-use crate::utils::{http::fetch_html, response::{RssResponse, ErrorResponse}};
 
 /// Generic scraper that extracts RSS from any page using CSS selectors
 /// Query params:
@@ -40,17 +43,23 @@ async fn do_scrape(params: ScrapeParams) -> anyhow::Result<String> {
     let title_sel = Selector::parse(&params.title)
         .map_err(|_| anyhow::anyhow!("Invalid title selector: {}", params.title))?;
 
-    let link_sel = params.link.as_ref().map(|s| {
-        Selector::parse(s).map_err(|_| anyhow::anyhow!("Invalid link selector"))
-    }).transpose()?;
+    let link_sel = params
+        .link
+        .as_ref()
+        .map(|s| Selector::parse(s).map_err(|_| anyhow::anyhow!("Invalid link selector")))
+        .transpose()?;
 
-    let desc_sel = params.desc.as_ref().map(|s| {
-        Selector::parse(s).map_err(|_| anyhow::anyhow!("Invalid desc selector"))
-    }).transpose()?;
+    let desc_sel = params
+        .desc
+        .as_ref()
+        .map(|s| Selector::parse(s).map_err(|_| anyhow::anyhow!("Invalid desc selector")))
+        .transpose()?;
 
-    let author_sel = params.author.as_ref().map(|s| {
-        Selector::parse(s).map_err(|_| anyhow::anyhow!("Invalid author selector"))
-    }).transpose()?;
+    let author_sel = params
+        .author
+        .as_ref()
+        .map(|s| Selector::parse(s).map_err(|_| anyhow::anyhow!("Invalid author selector")))
+        .transpose()?;
 
     // Get base URL for resolving relative links
     let base_url = {
@@ -86,12 +95,14 @@ async fn do_scrape(params: ScrapeParams) -> anyhow::Result<String> {
                 .unwrap_or_else(|| params.url.clone())
         };
 
-        let description = desc_sel.as_ref()
+        let description = desc_sel
+            .as_ref()
             .and_then(|sel| el.select(sel).next())
             .map(|e| e.text().collect::<String>().trim().to_string())
             .unwrap_or_default();
 
-        let author = author_sel.as_ref()
+        let author = author_sel
+            .as_ref()
             .and_then(|sel| el.select(sel).next())
             .map(|e| e.text().collect::<String>().trim().to_string());
 

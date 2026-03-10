@@ -13,7 +13,10 @@ pub static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
 pub async fn fetch_html(url: &str) -> Result<String> {
     let resp = HTTP_CLIENT
         .get(url)
-        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .header(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        )
         .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
         .send()
         .await?;
